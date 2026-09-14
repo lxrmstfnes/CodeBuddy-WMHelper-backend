@@ -1,0 +1,39 @@
+# =============================================================
+# 本地开发环境: OceanBase(业务库) + Redis(§8.4 会话记忆)
+# 首次初始化: ./init-db.sh
+# 日常起停:   docker compose up -d / docker compose down
+# =============================================================
+services:
+  oceanbase:
+    image: oceanbase/oceanbase-ce:latest
+    container_name: wealth-ob
+    ports:
+      - "2881:2881"          # OB SQL 端口(注意不是 3306)
+    environment:
+      MODE: slim             # 轻量模式,降低内存占用(本机 Docker 分配 8GB)
+      # 注:test 租户 root 密码已通过 ALTER USER 设为 root123(详见 init-db.sh);
+      # 该密码存于已有数据卷中,重建容器不影响;仅 docker compose down -v 清卷后需重设
+    volumes:
+      - ob-data:/root/ob     # 数据持久化,compose down 不丢数据
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: wealth-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:latest
+    container_name: wealth-adminer
+    ports:
+      - "8081:8080"          # 网页版数据库管理,避开后端 8080
+    # 注:OB root@test 已设密码 root123(Adminer 5.x 拦截空密码登录,插件方式在本镜像闪退,故采用设密码方案)
+    restart: unless-stopped
+
+volumes:
+  ob-data:
+  redis-data:
