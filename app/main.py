@@ -13,7 +13,7 @@ from starlette.exceptions import HTTPException
 
 from app.core.errors import BizError
 from app.core.response import error, ok
-from app.routers import ai, compliance, data
+from app.routers import ai, compliance, customer, data, intake, scripts
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -35,6 +35,9 @@ app.add_middleware(
 app.include_router(data.router)
 app.include_router(compliance.router)
 app.include_router(ai.router)
+app.include_router(customer.router)
+app.include_router(intake.router)
+app.include_router(scripts.router)
 
 
 @app.get("/api/health")

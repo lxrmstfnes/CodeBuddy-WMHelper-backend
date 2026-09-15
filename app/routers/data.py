@@ -11,6 +11,8 @@ from app.models import (
     ClientPersona, Company, MarketReport, MarketReportCard, MotEvent,
     Product, RolePlayScript, ScriptRound,
 )
+from app.schemas import MotDoneRequest
+from app.services import mot as mot_svc
 
 router = APIRouter(prefix="/api", tags=["数据接口"])
 
@@ -82,7 +84,7 @@ def list_scripts(db: Session = Depends(get_db)):
 
 @router.get("/mot/events")
 def mot_events(day: dt.date | None = Query(default=None, alias="date"), db: Session = Depends(get_db)):
-    """MoT 商机事件（§3.6），date 缺省为当天"""
+    """MoT 商机事件（§3.6），date 缺省为当天。含 pending / done，前端自行拆分。"""
     d = day or dt.date.today()
     events = (
         db.query(MotEvent)
@@ -91,3 +93,15 @@ def mot_events(day: dt.date | None = Query(default=None, alias="date"), db: Sess
         .all()
     )
     return ok([e.to_dict() for e in events])
+
+
+@router.post("/mot/events/{event_id}/done")
+def done_mot_event(event_id: int, req: MotDoneRequest, db: Session = Depends(get_db)):
+    """提交跟进结论（已购买/已意向/已了解等），今日商机移入已完成"""
+    return ok(mot_svc.mark_done(db, event_id, req.result, req.next_action))
+
+
+@router.post("/mot/events/{event_id}/reopen")
+def reopen_mot_event(event_id: int, db: Session = Depends(get_db)):
+    """从已完成撤销回待办"""
+    return ok(mot_svc.reopen(db, event_id))

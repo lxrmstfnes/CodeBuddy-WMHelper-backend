@@ -129,5 +129,9 @@ CREATE TABLE mot_event (
   assets VARCHAR(32),
   risk VARCHAR(32),
   traits VARCHAR(255),
-  touch VARCHAR(255)
+  touch VARCHAR(255),
+  status VARCHAR(16) DEFAULT 'pending' COMMENT 'pending待办/done已处理',
+  done_at DATETIME COMMENT '处理完成时间',
+  result VARCHAR(16) COMMENT 'purchased已购买/intent已意向/informed已了解/follow再跟进/no_intent暂无意向/missed未联系上',
+  next_action VARCHAR(16) COMMENT 'crm录入CRM/none无后续'
 ) DEFAULT CHARSET utf8mb4 COMMENT='MoT 商机事件(§3.6)';

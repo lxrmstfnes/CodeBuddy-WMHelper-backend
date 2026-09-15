@@ -200,3 +200,68 @@ def opening_user_prompt(script: dict, first_round_question: str) -> str:
         f"【指定场景】{angle}",
         f"【参考台词（请勿照抄）】{script['opening']}",
     ])
+
+
+# ============ MoT 一键生成微信话术（temperature=0.6, max_tokens=500） ============
+MOT_TYPE_HINT = {
+    "maturity": "场景是资金到期承接。先点出到期这件事，再用分口袋讲清楚流动性与中期配置，邀请到店或电话测算。不要催单、不要制造虚假紧迫感。",
+    "behavior": "场景是客户近期对某产品有兴趣。用关怀式开场（吃饭了没、最近是不是在看理财），不要暴露系统监测、浏览次数、停留时长等后台细节。",
+    "alert": "场景是持仓波动、客户可能焦虑。先接住情绪再讲逻辑，说明波动常见原因，明确不建议恐慌赎回，同时绝不承诺不亏、不承诺回本。",
+}
+
+MOT_SCRIPT_SYSTEM_PROMPT = '''你是四川农商行网点理财经理的展业助手，专门写能直接复制到微信的一条消息。
+服务对象是县域、乡镇客户，话术要像拉家常，不要像发公告。
+请严格输出 JSON，不要输出 JSON 以外的任何内容。
+
+输出 JSON 格式（严格遵守）：
+{"script": "一条完整的微信消息正文"}
+
+铁律：
+1. 120-180字，一条气泡发完；口语化，有称呼，结尾用一个轻松的小问题方便客户回。
+2. 只允许点名【可售产品】里出现的产品，禁止编造产品名、禁止编造收益率。
+3. 提到收益时必须说「业绩比较基准」，并带出「不代表实际收益」的意思。
+4. 严禁使用：保本、稳赚、刚兑、零风险、无风险、保收益，以及任何承诺收益、承诺不亏、承诺回本的说法。
+5. 不要暴露「系统监测」「浏览时长」「后台看到」等表述。
+6. 不要用 markdown、不要分点列表、不要标题；最多一个表情。
+7. 称呼用姓+总/姐/叔/哥，不要写全名，不要写手机号、客户号。'''
+
+
+def mot_script_user_prompt(ev, products: list[dict], customer: dict | None) -> str:
+    type_hint = MOT_TYPE_HINT.get(ev.type or "", "根据事件类型写一条得体的微信跟进。")
+    product_text = "\n".join(
+        f"- {p['company']}「{p['name']}」{p['riskLevel']} 业绩比较基准{p['benchmarkYield']} "
+        f"期限{p['term']} 起购{p['minAmount']}元 底层：{p['assetType']}"
+        for p in products
+    ) or "（暂无产品）"
+    cust_lines = ["（客户库未匹配到此人，仅依据本条商机）"]
+    if customer:
+        holdings = customer.get("holdings") or []
+        hold_text = "、".join(
+            f"{h.get('name')} {round((h.get('amount') or 0) / 10000)}万"
+            for h in holdings if isinstance(h, dict)
+        ) or "无在途持仓"
+        cust_lines = [
+            f"年龄段：{customer.get('age') or '未知'}",
+            f"风险等级：{customer.get('riskLevel') or '未知'}",
+            f"在行资产：{customer.get('aum') or '未知'}元",
+            f"画像备注：{customer.get('persona') or '无'}",
+            f"持仓：{hold_text}",
+            f"触达偏好：{customer.get('touchPref') or '无'}",
+        ]
+    return "\n".join([
+        f"【事件类型】{ev.type}",
+        f"【写稿要求】{type_hint}",
+        f"【客户称呼线索】{ev.client_name}（{ev.client_tag}）",
+        f"【商机标题】{ev.event_title}",
+        f"【事件详情】{ev.detail}",
+        f"【策略备忘（供参考，不要照抄成公文）】{ev.ai_strategy}",
+        f"【客户特征】{ev.traits}",
+        f"【触达建议】{ev.touch}",
+        f"【风险测评】{ev.risk}　【资产规模】{ev.assets}",
+        "",
+        "【客户档案】",
+        *cust_lines,
+        "",
+        "【可售产品】",
+        product_text,
+    ])

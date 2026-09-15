@@ -11,9 +11,9 @@ from app.core.response import ok
 from app.db import get_db
 from app.deps import manager_id
 from app.schemas import (
-    CrmExtractRequest, DiagnoseRequest, GradeRequest, OpeningRequest, SummaryRequest,
+    CrmExtractRequest, DiagnoseRequest, GradeRequest, MotScriptRequest, OpeningRequest, SummaryRequest,
 )
-from app.services import crm, diagnose, training
+from app.services import crm, diagnose, mot_script, training
 
 logger = logging.getLogger(__name__)
 
@@ -49,5 +49,16 @@ def client_diagnose(req: DiagnoseRequest, db: Session = Depends(get_db), mid: st
 
 @router.post("/crm/extract")
 def crm_extract(req: CrmExtractRequest, db: Session = Depends(get_db)):
-    """CRM 跟进记录提取（前端 pages/assistant 在用，spec 未列出，此处补齐）"""
-    return ok(crm.extract(req.text))
+    """CRM 跟进记录提取（前端 pages/assistant 在用，spec 未列出，此处补齐）。
+
+    设计稿§3.1：传 customerId 时落客户档案 + 自动生成跟进待办；
+    返回契约 {record, eventId, tasksCreated}。
+    """
+    return ok(crm.extract_and_archive(db, req.text, req.customer_id))
+
+
+@router.post("/mot/script")
+def mot_wechat_script(req: MotScriptRequest, db: Session = Depends(get_db), mid: str = Depends(manager_id)):
+    """待办一键生成微信话术：按商机 + 客户档案 + 可售产品现场写稿，合规词库清洗。"""
+    logger.info("[mot-script] manager=%s event=%s", mid, req.event_id)
+    return ok(mot_script.generate(db, req.event_id))

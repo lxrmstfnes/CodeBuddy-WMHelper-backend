@@ -30,14 +30,21 @@ def _client() -> OpenAI:
 
 
 def extract_json(content: str) -> dict:
-    """从模型输出中提取首个 JSON 对象（兼容 markdown 包裹与前后多余文本）"""
-    m = re.search(r"\{[\s\S]*\}", content or "")
-    if not m:
+    """从模型输出中提取首个 JSON 对象（兼容 markdown 包裹、前后多余文本、拼接的多段 JSON）。"""
+    text = (content or "").strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*", "", text)
+        text = re.sub(r"\s*```.*$", "", text, flags=re.S)
+    idx = text.find("{")
+    if idx < 0:
         raise LLMError("模型输出中未找到 JSON")
     try:
-        return json.loads(m.group(0))
+        obj, _ = json.JSONDecoder().raw_decode(text[idx:])
     except json.JSONDecodeError as e:
         raise LLMError(f"JSON 反序列化失败: {e}")
+    if not isinstance(obj, dict):
+        raise LLMError("模型输出 JSON 不是对象")
+    return obj
 
 
 def chat_json(system_prompt: str, user_prompt: str, *, temperature: float = 0.7, max_tokens: int = 1000) -> dict:

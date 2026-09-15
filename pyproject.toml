@@ -9,4 +9,6 @@ dependencies = [
     "pymysql>=1.2.0",
     "sqlalchemy>=2.0.52",
     "uvicorn[standard]>=0.52.4",
+    "qrcode>=8.0",
+    "pillow>=11.0.0",
 ]

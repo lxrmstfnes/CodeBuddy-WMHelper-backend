@@ -6,6 +6,16 @@ from app.models import ForbiddenWord
 
 DEFAULT_ALTERNATIVE = "请改用「历史业绩稳健」「风险等级较低」等行内核准表述"
 
+# 写入微信话术时不能整句替换（太长），只换短词
+SCRIPT_SHORT_REPLACE = {
+    "保本": "本金波动较小",
+    "稳赚": "历史业绩较稳",
+    "刚兑": "净值型管理",
+    "零风险": "风险等级较低",
+    "无风险": "风险等级较低",
+    "保收益": "业绩比较基准",
+}
+
 
 def _enabled_words(db: Session) -> list[ForbiddenWord]:
     return db.query(ForbiddenWord).filter(ForbiddenWord.enabled == 1).order_by(ForbiddenWord.id).all()
@@ -23,3 +33,15 @@ def check(db: Session, text: str) -> dict:
         if w.word and w.word in s:
             return {"ok": False, "word": w.word, "alternative": w.alternative or DEFAULT_ALTERNATIVE}
     return {"ok": True}
+
+
+def scrub_script(db: Session, text: str) -> tuple[str, bool, list[str]]:
+    """清洗话术中的违禁词。返回 (文本, 原文是否已合规, 命中词列表)。"""
+    s = text or ""
+    hits: list[str] = []
+    for w in _enabled_words(db):
+        word = w.word or ""
+        if word and word in s:
+            hits.append(word)
+            s = s.replace(word, SCRIPT_SHORT_REPLACE.get(word, "风险等级较低"))
+    return s, len(hits) == 0, hits

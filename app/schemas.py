@@ -53,5 +53,54 @@ class ComplianceCheckRequest(BaseModel):
 
 
 # ---------- CRM 跟进记录提取（前端 pages/assistant 在用，spec 未列出） ----------
-class CrmExtractRequest(BaseModel):
+class CrmExtractRequest(CamelModel):
     text: str
+    customer_id: str | None = None  # 传入则抽取结果落客户档案并自动生成待办（设计稿§3.1）
+
+
+# ---------- 客户域（客户数据库与AI跟踪设计稿 §2.1） ----------
+class EventCreateRequest(CamelModel):
+    """手工录入客户动态"""
+    type: str
+    title: str
+    payload: dict = {}
+    event_time: str | None = None  # "YYYY-MM-DD HH:mm"，缺省为当前时间
+
+
+class MotDoneRequest(CamelModel):
+    """MoT 处理提交：跟进结论必填，后续动作默认 none"""
+    result: Literal["purchased", "intent", "informed", "follow", "no_intent", "missed"]
+    next_action: Literal["crm", "none"] = "none"
+
+
+class MotScriptRequest(CamelModel):
+    """MoT 一键生成微信话术"""
+    event_id: int
+
+
+class TaskDoneRequest(CamelModel):
+    done_note: str | None = None
+
+
+class IntakeSubmitRequest(CamelModel):
+    """客户自助采集提交（扫码建档）"""
+    name: str
+    phone: str
+    age: str
+    amount: str
+    source: str
+    preferences: list[str] = []
+
+
+class ScriptCreateRequest(CamelModel):
+    title: str
+    body: str
+    category: str = "sales"
+    customer_id: str | None = None
+    source: str | None = None
+
+
+class MassSendRequest(CamelModel):
+    customer_ids: list[str]
+    mode: Literal["library", "personal"] = "library"
+    script_id: int | None = None

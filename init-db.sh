@@ -45,9 +45,13 @@ done
 
 echo "==> [3/4] 建库 + 建表"
 docker exec -i $OB_CONTAINER obclient -h127.0.0.1 -P2881 -uroot@test -proot123 < sql/01-schema.sql
+docker exec -i $OB_CONTAINER obclient -h127.0.0.1 -P2881 -uroot@test -proot123 < sql/03-crm-schema.sql
 
 echo "==> [4/4] 灌入种子数据"
 docker exec -i $OB_CONTAINER obclient -h127.0.0.1 -P2881 -uroot@test -proot123 < sql/02-seed.sql
+docker exec -i $OB_CONTAINER obclient -h127.0.0.1 -P2881 -uroot@test -proot123 < sql/04-crm-seed.sql
+docker exec -i $OB_CONTAINER obclient -h127.0.0.1 -P2881 -uroot@test -proot123 < sql/05-intake-schema.sql
+docker exec -i $OB_CONTAINER obclient -h127.0.0.1 -P2881 -uroot@test -proot123 < sql/06-scripts.sql
 
 echo ""
 echo "==> 完成!数据验证:"
@@ -61,7 +65,12 @@ UNION ALL SELECT 'market_report_card', COUNT(*) FROM market_report_card
 UNION ALL SELECT 'role_play_script', COUNT(*) FROM role_play_script
 UNION ALL SELECT 'script_round', COUNT(*) FROM script_round
 UNION ALL SELECT 'forbidden_word', COUNT(*) FROM forbidden_word
-UNION ALL SELECT 'mot_event', COUNT(*) FROM mot_event;"
+UNION ALL SELECT 'mot_event', COUNT(*) FROM mot_event
+UNION ALL SELECT 'customer', COUNT(*) FROM customer
+UNION ALL SELECT 'customer_event', COUNT(*) FROM customer_event
+UNION ALL SELECT 'follow_task', COUNT(*) FROM follow_task
+UNION ALL SELECT 'intake_token', COUNT(*) FROM intake_token
+UNION ALL SELECT 'script_item', COUNT(*) FROM script_item;"
 
 echo ""
 echo "==> 连接信息(SOFABoot application.yml):"
